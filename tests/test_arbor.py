@@ -1,39 +1,46 @@
+import itertools
 from collections import Counter
 
 import numpy as np
 import pytest
 
-from arbor import Arbor
+from arbor import ArborClassic, ArborNX
+from arbor.arbor import FlowCentrality
+
+
+@pytest.fixture(params=[ArborClassic, ArborNX])
+def arbor_class(request):
+    return request.param
 
 
 @pytest.fixture
-def simple_arbor():
-    arbor = Arbor()
+def simple_arbor(arbor_class):
+    arbor = arbor_class()
     arbor.add_path([1, 2, 3, 4, 5])
     arbor.add_path([3, 6, 7, 8])
     return arbor
 
 
-def test_instantiate():
-    arbor = Arbor()
+def test_instantiate(arbor_class):
+    arbor = arbor_class()
 
 
-def test_add_edge_pairs():
-    arbor = Arbor()
+def test_add_edge_pairs(arbor_class):
+    arbor = arbor_class()
     arbor.add_edge_pairs((2, 1), (3, 2), (4, 3))
     assert arbor.edges == {2: 1, 3: 2, 4: 3}
     assert arbor.root == 1
 
 
-def test_add_edges():
-    arbor = Arbor()
+def test_add_edges(arbor_class):
+    arbor = arbor_class()
     arbor.add_edges([2, 1, 3, 2, 4, 3])
     assert arbor.edges == {2: 1, 3: 2, 4: 3}
     assert arbor.root == 1
 
 
-def test_add_path():
-    arbor = Arbor()
+def test_add_path(arbor_class):
+    arbor = arbor_class()
     arbor.add_path([1, 2, 3, 4])
     assert arbor.edges == {2: 1, 3: 2, 4: 3}
     assert arbor.root == 1
@@ -101,9 +108,42 @@ def test_nodes_distance_to_euclidean(simple_arbor):
     assert_distances_close(nodes_distance_to.distances, {idx: (idx-1) * unit_len for idx in range(1, 9)})
 
 
+def starts_with(sequence, subsequence):
+    return sequence[:len(subsequence)] == subsequence
+
+
 def test_partition(simple_arbor):
-    partition = simple_arbor.partition()
-    assert partition == [
-        [5, 4, 3],
-        [8, 7, 6, 3, 2, 1],
-    ]
+    partitions = simple_arbor.partition()
+    # 2 partitions; , are of length
+    assert len(partitions) == 2
+    # repeat the branch point and nothing else
+    assert dict(Counter(itertools.chain(*partitions))) == {
+        1: 1,
+        2: 1,
+        3: 2,
+        4: 1,
+        5: 1,
+        6: 1,
+        7: 1,
+        8: 1,
+    }
+    # which start with with 5,4,3 and 8,7,6,3
+    assert all(starts_with(partition, [5, 4, 3]) or starts_with(partition, [8, 7, 6, 3]) for partition in partitions)
+    # one of which ends with 3, 2, 1
+    assert any(starts_with(partition[::-1], [1, 2, 3]) for partition in partitions)
+
+
+def test_flow_centrality(simple_arbor):
+    sources = {4: 2}
+    targets = {7: 3, 4: 1}
+    fc = simple_arbor.flow_centrality(targets, sources)
+    assert fc == {  # tested with JS implementation
+        5: FlowCentrality(centrifugal=0, centripetal=0),
+        4: FlowCentrality(centrifugal=6, centripetal=0),
+        3: FlowCentrality(centrifugal=0, centripetal=0),
+        8: FlowCentrality(centrifugal=0, centripetal=0),
+        7: FlowCentrality(centrifugal=0, centripetal=6),
+        6: FlowCentrality(centrifugal=0, centripetal=6),
+        2: FlowCentrality(centrifugal=0, centripetal=0),
+        1: FlowCentrality(centrifugal=0, centripetal=0)
+    }
