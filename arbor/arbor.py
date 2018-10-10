@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from numbers import Number
+
 import itertools
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict, Counter
 from functools import lru_cache
 from itertools import tee
 from typing import (
-    Optional, Callable, Dict, Sequence, List, NamedTuple, Iterable, Tuple, Set
+    Optional,
+    Callable,
+    Dict,
+    Sequence,
+    List,
+    Iterable,
+    Tuple,
+    Set,
+    NamedTuple,
 )
 
 import networkx as nx
@@ -16,13 +27,20 @@ import numpy as np
 from arbor.common import euclidean_distance
 
 
-class NodesDistanceTo(NamedTuple):
+@dataclass
+class NodesDistanceTo:
     distances: Dict[int, float]
 
     @property
     @lru_cache(1)
     def max(self):
         return max(self.distances.values())
+
+    def to_dict(self):
+        return {
+            "distances": self.distances,
+            "max": self.max,
+        }
 
 
 class BranchAndEndNodes(NamedTuple):
@@ -33,8 +51,16 @@ class BranchAndEndNodes(NamedTuple):
     def n_branches(self):
         return len(self.branches)
 
+    def to_dict(self):
+        return {
+            "branches": self.branches,
+            "ends": self.ends,
+            "n_branches": self.n_branches
+        }
 
-class FlowCentrality(NamedTuple):
+
+@dataclass
+class FlowCentrality:
     centrifugal: int
     centripetal: int
 
@@ -43,14 +69,26 @@ class FlowCentrality(NamedTuple):
     def sum(self):
         return self.centrifugal + self.centripetal
 
+    def to_dict(self):
+        return {
+            "centrifugal": self.centrifugal,
+            "centripetal": self.centripetal,
+            "sum": self.sum
+        }
+
 
 class BaseArbor(metaclass=ABCMeta):
+    def to_dict(self):
+        return {'root': self.root, 'edges': self.edges}
+
     @abstractmethod
     def find_root(self) -> Optional[int]:
         pass
 
     @abstractmethod
-    def add_edges(self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]]=None) -> BaseArbor:
+    def add_edges(
+        self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]] = None
+    ) -> BaseArbor:
         """
         Add a flattened sequence of edges to the arbor.
 
@@ -108,10 +146,10 @@ class BaseArbor(metaclass=ABCMeta):
 
     @abstractmethod
     def nodes_distance_to(
-            self,
-            root: Optional[int]=None,
-            distance_fn: Optional[Callable]=None,
-            location_dict: Optional[Dict[int, np.ndarray]]=None
+        self,
+        root: Optional[int] = None,
+        distance_fn: Optional[Callable] = None,
+        location_dict: Optional[Dict[int, np.ndarray]] = None,
     ) -> NodesDistanceTo:
         """
 
@@ -183,7 +221,9 @@ class BaseArbor(metaclass=ABCMeta):
     def all_neighbours(self) -> Dict[int, List[int]]:
         pass
 
-    def flow_centrality(self, targets: Dict[int, int], sources: Dict[int, int]) -> Optional[Dict[int, FlowCentrality]]:
+    def flow_centrality(
+        self, targets: Dict[int, int], sources: Dict[int, int]
+    ) -> Optional[Dict[int, FlowCentrality]]:
         """
         Calculate the flow centrality for each treenode:
         i.e. the number of paths from all input, output pairs which go through it
@@ -212,7 +252,7 @@ class BaseArbor(metaclass=ABCMeta):
 
             for idx, node_id in enumerate(partition):
                 if node_id == 3:
-                    a=1+1
+                    a = 1 + 1
                 these_counts = counts.get(node_id)
                 if these_counts is None:
                     seen_src += sources.get(node_id, 0)
@@ -229,15 +269,30 @@ class BaseArbor(metaclass=ABCMeta):
 
                 centrality[node_id] = FlowCentrality(
                     centrifugal=seen_src * (total_targets - seen_tgt),
-                    centripetal=seen_tgt * (total_sources - seen_src)
+                    centripetal=seen_tgt * (total_sources - seen_src),
                 )
 
         return centrality
 
+    def nodes_list(self) -> List[int]:
+        """List all nodes present"""
+        out = list(self.edges)
+        if self.root:
+            out.append(self.root)
+        return out
+
+    def nodes_order_from(self, root: Optional[int] = None) -> Dict[int, Number]:
+        """Find graph topological distance from all nodes to given node (default root)"""
+        return self.nodes_distance_to(root or self.root).distances
+
+    def sub_arbor(self, new_root: int) -> BaseArbor:
+        """Return a new arbor which is a shallow copy of this arbor, starting at the given node"""
+        pass
+
 
 class ArborNX(BaseArbor):
     def __init__(self):
-        self.root = None
+        self._root = None
 
         # DiGraph with edges pointing towards root
         self._disto_proximal = nx.OrderedDiGraph()
@@ -246,11 +301,20 @@ class ArborNX(BaseArbor):
         self._undirected = self._disto_proximal.to_undirected(as_view=True)
         self._proximo_distal = self._disto_proximal.reverse(copy=False)
 
-        self._length_key = '_length'
+        self._length_key = "_length"
 
     def _invalidate_cache(self):
         self._edges = None
         self._undirected = None
+
+    @property
+    def root(self):
+        return self._root
+
+    @root.setter
+    def root(self, value):
+        self._disto_proximal.add_node(value)
+        self._root = value
 
     @property
     def edges(self):
@@ -262,18 +326,23 @@ class ArborNX(BaseArbor):
             if degree == 0:
                 return node_id
 
-    def add_edges(self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]]=None):
+    def add_edges(
+        self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]] = None
+    ):
         if not accessor:
+
             def accessor(node_id, idx):
                 return node_id
 
-        return self.add_edge_pairs(*(
-            [accessor(*idx_id_pair[::-1]) for idx_id_pair in child_parent_idx_id]
-            for child_parent_idx_id in zip(*[iter(enumerate(edges))] * 2)
-        ))
+        return self.add_edge_pairs(
+            *(
+                [accessor(*idx_id_pair[::-1]) for idx_id_pair in child_parent_idx_id]
+                for child_parent_idx_id in zip(*[iter(enumerate(edges))] * 2)
+            )
+        )
 
-    def add_edge_pairs(self, *child_parent_ids: Tuple[int, int]) -> BaseArbor:
-        self._disto_proximal.add_edges_from(child_parent_ids)
+    def add_edge_pairs(self, *distal_proximal_ids: Tuple[int, int]) -> BaseArbor:
+        self._disto_proximal.add_edges_from(distal_proximal_ids)
         self.root = self.find_root()
         return self
 
@@ -301,35 +370,58 @@ class ArborNX(BaseArbor):
         self.root = new_root
         return self
 
-    def _populate_edge_length(self, distance_fn: Optional[Callable]=None,
-                          location_dict: Optional[Dict[int, np.ndarray]]=None):
+    def _populate_edge_length(
+        self,
+        distance_fn: Optional[Callable] = None,
+        location_dict: Optional[Dict[int, np.ndarray]] = None,
+    ):
         if distance_fn is None:
             if location_dict is None:
+
                 def distance_fn(node1, node2):
                     return 1
+
             else:
+
                 def distance_fn(node1, node2):
-                    return euclidean_distance(location_dict[node1], location_dict[node2])
+                    return euclidean_distance(
+                        location_dict[node1], location_dict[node2]
+                    )
 
         for src, tgt in self._disto_proximal.edges:
-            self._disto_proximal.edges[src, tgt][self._length_key] = distance_fn(src, tgt)
+            self._disto_proximal.edges[src, tgt][self._length_key] = distance_fn(
+                src, tgt
+            )
 
-    def nodes_distance_to(self, root: Optional[int]=None, distance_fn: Optional[Callable] = None,
-                          location_dict: Optional[Dict[int, np.ndarray]] = None) -> NodesDistanceTo:
+    def nodes_distance_to(
+        self,
+        root: Optional[int] = None,
+        distance_fn: Optional[Callable] = None,
+        location_dict: Optional[Dict[int, np.ndarray]] = None,
+    ) -> NodesDistanceTo:
+        # todo: may need to constrain to only look at disto-proximal paths
         if root is None:
             root = self.root
 
         self._populate_edge_length(distance_fn, location_dict)
 
-        return NodesDistanceTo(nx.shortest_path_length(self._undirected, target=root, weight="_length"))
+        return NodesDistanceTo(
+            nx.shortest_path_length(self._undirected, target=root, weight="_length")
+        )
 
-    def _all_distances(self, distance_fn: Optional[Callable] = None,
-                          location_dict: Optional[Dict[int, np.ndarray]] = None):
+    def _all_distances(
+        self,
+        distance_fn: Optional[Callable] = None,
+        location_dict: Optional[Dict[int, np.ndarray]] = None,
+    ) -> Dict[int, Dict[int, float]]:
         self._populate_edge_length(distance_fn, location_dict)
         return nx.shortest_path_length(self._undirected, weight=self._length_key)
 
     def all_successors(self) -> Dict[int, List[int]]:
-        return {n: list(self._proximo_distal.successors(n)) for n in self._proximo_distal.nodes}
+        return {
+            n: list(self._proximo_distal.successors(n))
+            for n in self._proximo_distal.nodes
+        }
 
     def partition(self) -> List[List[int]]:
         branches, ends, paths_to_root = self._branches_ends_paths()
@@ -378,6 +470,22 @@ class ArborNX(BaseArbor):
             out[tgt].append(src)
         return dict(out)
 
+    def nodes_list(self):
+        return list(self._disto_proximal.nodes)
+
+    def sub_arbor(self, new_root: int) -> BaseArbor:
+        sub = ArborNX()
+        sub.root = new_root
+        to_visit = [new_root]
+        edge_pairs = []
+        while to_visit:
+            proximal = to_visit.pop()
+            for distal in self._proximo_distal.successors(proximal):
+                edge_pairs.append((distal, proximal))
+                to_visit.append(distal)
+        sub.add_edge_pairs(*edge_pairs)
+        return sub
+
 
 class ArborClassic(BaseArbor):
     """
@@ -401,7 +509,9 @@ class ArborClassic(BaseArbor):
             if parent_id not in self.edges:
                 return parent_id
 
-    def add_edges(self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]]=None):
+    def add_edges(
+        self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]] = None
+    ):
         """
         Add a flattened sequence of edges to the arbor.
 
@@ -417,13 +527,16 @@ class ArborClassic(BaseArbor):
         self
         """
         if not accessor:
+
             def accessor(node_id, idx):
                 return node_id
 
-        return self.add_edge_pairs(*(
-            [accessor(*idx_id_pair[::-1]) for idx_id_pair in child_parent_idx_id]
-            for child_parent_idx_id in zip(*[iter(enumerate(edges))] * 2)
-        ))
+        return self.add_edge_pairs(
+            *(
+                [accessor(*idx_id_pair[::-1]) for idx_id_pair in child_parent_idx_id]
+                for child_parent_idx_id in zip(*[iter(enumerate(edges))] * 2)
+            )
+        )
 
     def add_edge_pairs(self, *child_parent_ids: Tuple[int, int]):
         """
@@ -497,10 +610,10 @@ class ArborClassic(BaseArbor):
             return self
 
     def nodes_distance_to(
-            self,
-            root: Optional[int]=None,
-            distance_fn: Optional[Callable]=None,
-            location_dict: Optional[Dict[int, np.ndarray]]=None
+        self,
+        root: Optional[int] = None,
+        distance_fn: Optional[Callable] = None,
+        location_dict: Optional[Dict[int, np.ndarray]] = None,
     ) -> NodesDistanceTo:
         """
 
@@ -528,11 +641,16 @@ class ArborClassic(BaseArbor):
 
         if distance_fn is None:
             if location_dict is None:
+
                 def distance_fn(node1, node2):
                     return 1
+
             else:
+
                 def distance_fn(node1, node2):
-                    return euclidean_distance(location_dict[node1], location_dict[node2])
+                    return euclidean_distance(
+                        location_dict[node1], location_dict[node2]
+                    )
 
         distances = dict()
 
@@ -556,7 +674,9 @@ class ArborClassic(BaseArbor):
 
             if successor_ids:
                 for successor_id in successor_ids:
-                    open_.append((successor_id, dist + distance_fn(successor_id, parent_id)))
+                    open_.append(
+                        (successor_id, dist + distance_fn(successor_id, parent_id))
+                    )
 
         return NodesDistanceTo(distances)
 
@@ -587,12 +707,12 @@ class ArborClassic(BaseArbor):
         -------
         List of lists of node IDs
         """
-        branches, ends = self.find_branch_and_end_nodes()
+        branches_ends = self.find_branch_and_end_nodes()
         partitions = []
         junctions = dict()
 
         # sort for deterministic result
-        open_ = [[n] for n in sorted(ends)]
+        open_ = [[n] for n in sorted(branches_ends.ends)]
 
         while open_:
             seq = open_.pop(0)
@@ -605,7 +725,7 @@ class ArborClassic(BaseArbor):
                 if parent_id is None:
                     break
                 seq.append(parent_id)
-                n_successors = branches.get(parent_id)
+                n_successors = branches_ends.branches.get(parent_id)
                 node_id = parent_id
 
             if parent_id is None:
@@ -618,8 +738,7 @@ class ArborClassic(BaseArbor):
                     junction.append(seq)
                     if len(junction) == n_successors:
                         longest_idx, longest_item = max(
-                            enumerate(junction),
-                            key=lambda x: len(x[1])
+                            enumerate(junction), key=lambda x: len(x[1])
                         )
                         for idx, item in enumerate(junction):
                             if idx == longest_idx:
@@ -627,7 +746,7 @@ class ArborClassic(BaseArbor):
                             else:
                                 partitions.append(item)
 
-        assert len(partitions) == len(ends)
+        assert len(partitions) == len(branches_ends.ends)
         return partitions
 
     def children_list(self) -> List[int]:
