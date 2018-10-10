@@ -81,6 +81,27 @@ class BaseArbor(metaclass=ABCMeta):
     def to_dict(self):
         return {'root': self.root, 'edges': self.edges}
 
+    def _is_valid(self):
+        if self.edges:
+            assert self.root is not None, 'Edges exist but root not set'
+
+        proximo_distal = nx.DiGraph()
+        proximo_distal.add_node(self.root)
+        for distal, proximal in self.edges.items():
+            assert isinstance(distal, int), f'Node {distal} is not an integer'
+            assert isinstance(proximal, int), f'Node {proximal} is not an integer'
+            proximo_distal.add_edge(proximal, distal)
+
+        assert nx.is_directed_acyclic_graph(proximo_distal), "Arbor is not a DAG"
+
+        in_degree = dict(proximo_distal.in_degree)
+
+        roots = [n for n, d in in_degree.items() if d == 0]
+        assert len(roots) == 1, f"Arbor has {len(roots)} roots: {roots}"
+        assert self.root == roots[0], f"Explicit root ({self.root}) is not implicit root ({roots[0]})"
+
+        assert all(d <= 1 for d in in_degree.values()), f"Some nodes have more than one proximal neighbour"
+
     @abstractmethod
     def find_root(self) -> Optional[int]:
         pass
