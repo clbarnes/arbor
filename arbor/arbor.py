@@ -32,7 +32,6 @@ class NodesDistanceTo:
     distances: Dict[int, float]
 
     @property
-    @lru_cache(1)
     def max(self):
         return max(self.distances.values())
 
@@ -54,7 +53,7 @@ class BranchAndEndNodes(NamedTuple):
     def to_dict(self):
         return {
             "branches": self.branches,
-            "ends": self.ends,
+            "ends": sorted(self.ends),
             "n_branches": self.n_branches
         }
 
@@ -65,7 +64,6 @@ class FlowCentrality:
     centripetal: int
 
     @property
-    @lru_cache(1)
     def sum(self):
         return self.centrifugal + self.centripetal
 
@@ -77,11 +75,37 @@ class FlowCentrality:
         }
 
 
+def assert_rooted_tree(g: nx.DiGraph, root: Optional[int]):
+    """
+
+    Parameters
+    ----------
+    g : proximo-distal
+    root
+
+    Returns
+    -------
+
+    """
+    assert nx.is_connected(g.to_undirected(as_view=True)), 'Arbor is not fully-connected'
+    assert nx.is_directed_acyclic_graph(g), "Arbor is not a DAG"
+
+    in_degree = dict(g.in_degree)
+
+    roots = [n for n, d in in_degree.items() if d == 0]
+    assert len(roots) == 1, f"Arbor has {len(roots)} roots: {roots}"
+
+    if root is not None:
+        assert root == roots[0], f"Explicit root ({root}) is not implicit root ({roots[0]})"
+
+    assert all(d <= 1 for d in in_degree.values()), f"Some nodes have more than one proximal neighbour"
+
+
 class BaseArbor(metaclass=ABCMeta):
     def to_dict(self):
         return {'root': self.root, 'edges': self.edges}
 
-    def _is_valid(self):
+    def _assert_valid(self):
         if self.edges:
             assert self.root is not None, 'Edges exist but root not set'
 
@@ -92,15 +116,7 @@ class BaseArbor(metaclass=ABCMeta):
             assert isinstance(proximal, int), f'Node {proximal} is not an integer'
             proximo_distal.add_edge(proximal, distal)
 
-        assert nx.is_directed_acyclic_graph(proximo_distal), "Arbor is not a DAG"
-
-        in_degree = dict(proximo_distal.in_degree)
-
-        roots = [n for n, d in in_degree.items() if d == 0]
-        assert len(roots) == 1, f"Arbor has {len(roots)} roots: {roots}"
-        assert self.root == roots[0], f"Explicit root ({self.root}) is not implicit root ({roots[0]})"
-
-        assert all(d <= 1 for d in in_degree.values()), f"Some nodes have more than one proximal neighbour"
+        assert_rooted_tree(proximo_distal, self.root)
 
     @abstractmethod
     def find_root(self) -> Optional[int]:
@@ -206,19 +222,6 @@ class BaseArbor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def partition(self) -> List[List[int]]:
-        """
-        Return a list of paths where each path starts with a leaf node and ends with either the root node,
-        or a node which exists in another path.
-        Nodes which are not junctions should only appear once across all paths.
-
-        Returns
-        -------
-        List of lists of node IDs
-        """
-        pass
-
-    @abstractmethod
     def children_list(self) -> List[int]:
         """Return list of non-root nodes"""
         pass
@@ -235,19 +238,72 @@ class BaseArbor(metaclass=ABCMeta):
         """
         pass
 
-    def partition_sorted(self):
+    def partition_sorted(self) -> List[List[int]]:
         return sorted(self.partition(), key=len)
 
     @abstractmethod
     def all_neighbours(self) -> Dict[int, List[int]]:
         pass
 
+    def partition(self) -> List[List[int]]:
+        """
+        Return a list of paths where each path starts with a leaf node and ends with either the root node,
+        or a node which exists in another path.
+        Nodes which are not junctions should only appear once across all paths.
+
+        Returns
+        -------
+        List of lists of node IDs
+        """
+        branches, ends = self.find_branch_and_end_nodes()
+        partitions = []
+        junctions = dict()
+
+        # sort for deterministic result
+        open_ = [[n] for n in sorted(ends)]
+
+        while open_:
+            seq = open_.pop(0)
+            node_id = seq[-1]
+            n_successors = None
+            parent_id = None
+
+            while n_successors is None:
+                # loop until you find a branch
+                parent_id = self.edges.get(node_id)
+                if parent_id is None:
+                    break
+                seq.append(parent_id)
+                n_successors = branches.get(parent_id)
+                node_id = parent_id
+
+            if parent_id is None:
+                # reached root
+                partitions.append(seq)
+            else:
+                junction = junctions.get(node_id)
+                if junction is None:
+                    junctions[node_id] = [seq]
+                else:
+                    junction.append(seq)
+                    if len(junction) == n_successors:
+                        longest_idx, longest_item = max(
+                            enumerate(junction), key=lambda x: len(x[1])
+                        )
+                        for idx, item in enumerate(junction):
+                            if idx == longest_idx:
+                                open_.append(item)
+                            else:
+                                partitions.append(item)
+
+        assert len(partitions) == len(ends)
+        return partitions
+
     def flow_centrality(
         self, targets: Dict[int, int], sources: Dict[int, int]
     ) -> Optional[Dict[int, FlowCentrality]]:
         """
-        Calculate the flow centrality for each treenode:
-        i.e. the number of paths from all input, output pairs which go through it
+        Calculate the flow centrality for each treenode.
 
         Parameters
         ----------
@@ -263,34 +319,30 @@ class BaseArbor(metaclass=ABCMeta):
         if total_sources == 0 or total_targets == 0:
             return None
 
-        partitions = self.partition_sorted()
-        counts = dict()  # node: {"seen_src": int, "seen_tgt": int}
+        node_to_counts = dict()  # node: {"seen_src": int, "seen_tgt": int}
         centrality = dict()
 
-        for partition in partitions:
+        # shortest partition first
+        for partition in self.partition_sorted():
             seen_src = 0
             seen_tgt = 0
 
             for idx, node_id in enumerate(partition):
-                if node_id == 3:
-                    a = 1 + 1
-                these_counts = counts.get(node_id)
-                if these_counts is None:
+                counts = node_to_counts.get(node_id)
+                if counts is None:
                     seen_src += sources.get(node_id, 0)
                     seen_tgt += targets.get(node_id, 0)
                     if idx == len(partition) - 1:
                         # node is the root, or a branch being addressed for the first time
-                        counts[node_id] = {"seen_src": seen_src, "seen_tgt": seen_tgt}
+                        node_to_counts[node_id] = {"seen_src": seen_src, "seen_tgt": seen_tgt}
                 else:
                     # node is a branch point which has been addressed before
-                    seen_src += these_counts["seen_src"]
-                    seen_tgt += these_counts["seen_tgt"]
-                    these_counts["seen_src"] = seen_src
-                    these_counts["seen_tgt"] = seen_tgt
+                    counts["seen_src"] += seen_src
+                    counts["seen_tgt"] += seen_tgt
 
                 centrality[node_id] = FlowCentrality(
-                    centrifugal=seen_src * (total_targets - seen_tgt),
-                    centripetal=seen_tgt * (total_sources - seen_src),
+                    centripetal=seen_src * (total_targets - seen_tgt),
+                    centrifugal=seen_tgt * (total_sources - seen_src),
                 )
 
         return centrality
@@ -323,10 +375,6 @@ class ArborNX(BaseArbor):
         self._proximo_distal = self._disto_proximal.reverse(copy=False)
 
         self._length_key = "_length"
-
-    def _invalidate_cache(self):
-        self._edges = None
-        self._undirected = None
 
     @property
     def root(self):
@@ -414,6 +462,24 @@ class ArborNX(BaseArbor):
                 src, tgt
             )
 
+    def partition(self):
+        branches, ends = self.find_branch_and_end_nodes()
+        all_paths = nx.shortest_path(self._undirected, target=self.root)
+        paths = sorted((all_paths[src] for src in ends), key=len, reverse=True)
+        visited = set()
+        partitions = []
+        for path in paths:
+            partition = []
+            for node in path:
+                partition.append(node)
+                if node in visited:
+                    assert node in branches
+                    break
+                visited.add(node)
+            partitions.append(partition)
+
+        return partitions
+
     def nodes_distance_to(
         self,
         root: Optional[int] = None,
@@ -444,20 +510,6 @@ class ArborNX(BaseArbor):
             for n in self._proximo_distal.nodes
         }
 
-    def partition(self) -> List[List[int]]:
-        branches, ends, paths_to_root = self._branches_ends_paths()
-        visited = set()
-        partitions = []
-        for end in sorted(ends):
-            partition = []
-            for node in paths_to_root[end]:
-                partition.append(node)
-                if node in visited:
-                    break
-                visited.add(node)
-            partitions.append(partition)
-        return partitions
-
     def children_list(self) -> List[int]:
         return [n for n in self._disto_proximal.nodes if n != self.root]
 
@@ -475,11 +527,15 @@ class ArborNX(BaseArbor):
         return branches, ends, paths_to_root
 
     def find_branch_and_end_nodes(self) -> BranchAndEndNodes:
-        branches, ends, paths_to_root = self._branches_ends_paths()
-        visitations = Counter(
-            itertools.chain.from_iterable(paths_to_root[end] for end in ends)
-        )
-        branches = {branch: visitations[branch] for branch in branches}
+        branches = dict()
+        ends = set()
+
+        for node, degree in dict(self._disto_proximal.in_degree).items():
+            if degree > 1:
+                branches[node] = degree
+            elif degree == 0:
+                ends.add(node)
+
         return BranchAndEndNodes(branches, ends)
 
     def all_neighbours(self):
@@ -717,58 +773,6 @@ class ArborClassic(BaseArbor):
                 successors[child_id] = []
 
         return dict(successors)
-
-    def partition(self) -> List[List[int]]:
-        """
-        Return a list of paths where each path starts with a leaf node and ends with either the root node,
-        or a node which exists in another path.
-        Nodes which are not junctions should only appear once across all paths.
-
-        Returns
-        -------
-        List of lists of node IDs
-        """
-        branches_ends = self.find_branch_and_end_nodes()
-        partitions = []
-        junctions = dict()
-
-        # sort for deterministic result
-        open_ = [[n] for n in sorted(branches_ends.ends)]
-
-        while open_:
-            seq = open_.pop(0)
-            node_id = seq[-1]
-            n_successors = None
-            parent_id = None
-
-            while n_successors is None:
-                parent_id = self.edges.get(node_id)
-                if parent_id is None:
-                    break
-                seq.append(parent_id)
-                n_successors = branches_ends.branches.get(parent_id)
-                node_id = parent_id
-
-            if parent_id is None:
-                partitions.append(seq)
-            else:
-                junction = junctions.get(node_id)
-                if junction is None:
-                    junctions[node_id] = [seq]
-                else:
-                    junction.append(seq)
-                    if len(junction) == n_successors:
-                        longest_idx, longest_item = max(
-                            enumerate(junction), key=lambda x: len(x[1])
-                        )
-                        for idx, item in enumerate(junction):
-                            if idx == longest_idx:
-                                open_.append(item)
-                            else:
-                                partitions.append(item)
-
-        assert len(partitions) == len(branches_ends.ends)
-        return partitions
 
     def children_list(self) -> List[int]:
         """Return list of non-root nodes"""

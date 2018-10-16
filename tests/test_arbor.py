@@ -1,16 +1,28 @@
 import itertools
 from collections import Counter
 
+import networkx as nx
 import numpy as np
 import pytest
 
 from arbor import ArborClassic, ArborNX
-from arbor.arbor import FlowCentrality
-from tests.fixtures import arbor_class, simple_arbor
+from arbor.arbor import FlowCentrality, assert_rooted_tree
+from tests.fixtures import (
+    arbor_class, simple_arbor, real_arbor_parser, compact_arbor, get_expected, real_arbor
+)
+from tests.utils import to_jso_like
+
+FIXTURE_DIR = 'arbor'
 
 
 def test_instantiate(arbor_class):
     arbor = arbor_class()
+
+
+def test_setup_correctly(real_arbor):
+    expected = get_expected(FIXTURE_DIR, 'arbor')
+    real = real_arbor.to_dict()
+    assert real == expected
 
 
 def test_add_edge_pairs(arbor_class):
@@ -67,6 +79,15 @@ def test_find_branch_end_nodes(simple_arbor):
     assert_same_members(branch_end_nodes.ends, [8, 5])
 
 
+def test_find_branch_end_nodes_real(real_arbor):
+    real = real_arbor.find_branch_and_end_nodes()
+    expected = get_expected(FIXTURE_DIR, 'find_branch_and_end_nodes')
+
+    assert real.branches == expected['branches']
+    assert sorted(real.ends) == sorted(expected['ends'])
+    assert real.n_branches == expected['n_branches']
+
+
 def test_nodes_distance_to_simple(simple_arbor):
     nodes_distance_to = simple_arbor.nodes_distance_to()
     assert nodes_distance_to.distances == {
@@ -101,28 +122,39 @@ def starts_with(sequence, subsequence):
     return sequence[: len(subsequence)] == subsequence
 
 
+def partitions_to_digraph(partitions):
+    g = nx.DiGraph()
+    visited = set()
+    root = None
+    for partition in partitions:
+        rev = list(reversed(partition))
+        if rev[0] not in visited:
+            root = rev[0]
+        g.add_path(rev)
+        visited.update(rev)
+    assert_rooted_tree(g, root)
+    return g
+
+
+def assert_equivalent_partitions(test, ref):
+    g_test = partitions_to_digraph(test)
+    g_ref = partitions_to_digraph(ref)
+    assert set(g_test.edges) == set(g_ref.edges)
+
+
 def test_partition(simple_arbor):
     partitions = simple_arbor.partition()
-    # 2 partitions; , are of length
-    assert len(partitions) == 2
-    # repeat the branch point and nothing else
-    assert dict(Counter(itertools.chain(*partitions))) == {
-        1: 1,
-        2: 1,
-        3: 2,
-        4: 1,
-        5: 1,
-        6: 1,
-        7: 1,
-        8: 1,
-    }
-    # which start with with 5,4,3 and 8,7,6,3
-    assert all(
-        starts_with(partition, [5, 4, 3]) or starts_with(partition, [8, 7, 6, 3])
-        for partition in partitions
-    )
-    # one of which ends with 3, 2, 1
-    assert any(starts_with(partition[::-1], [1, 2, 3]) for partition in partitions)
+    assert_equivalent_partitions(partitions, [
+        [5, 4, 3, 2, 1],
+        [8, 7, 6, 3],
+    ])
+
+
+def test_partition_real(real_arbor):
+    expected = get_expected(FIXTURE_DIR, "partition")
+    real = real_arbor.partition()
+
+    assert_equivalent_partitions(real, expected)
 
 
 def test_flow_centrality(simple_arbor):
@@ -139,3 +171,13 @@ def test_flow_centrality(simple_arbor):
         2: FlowCentrality(centrifugal=0, centripetal=0),
         1: FlowCentrality(centrifugal=0, centripetal=0),
     }
+
+
+def test_flow_centrality_real(real_arbor_parser):
+    expected = get_expected(FIXTURE_DIR, "flow_centrality")
+    sources = real_arbor_parser.inputs
+    targets = real_arbor_parser.outputs
+    real = real_arbor_parser.arbor.flow_centrality(targets, sources)
+
+    jso_real = to_jso_like(real)
+    assert expected == jso_real

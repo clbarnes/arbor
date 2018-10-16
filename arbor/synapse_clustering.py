@@ -25,9 +25,9 @@ class ArborRegions:
 
     def to_dict(self):
         return {
-            "above": self.above,
-            "plateau": self.plateau,
-            "zeros": self.zeros
+            "above": sorted(self.above),
+            "plateau": sorted(self.plateau),
+            "zeros": sorted(self.zeros),
         }
 
 

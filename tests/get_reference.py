@@ -1,6 +1,5 @@
 import subprocess
 
-from pathlib import Path
 from urllib.request import urlopen
 
 from tests.fixtures import DATA_ROOT, TEST_SKELETON

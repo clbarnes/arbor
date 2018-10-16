@@ -88,11 +88,15 @@ const skeletonData = {{
 
 const realArborParser = new ArborParser();
 realArborParser.init(arborData.url, arborData.json);
+writeObject(PARSER_REF_PATH + '/arborparser.json', realArborParser);
 
 const realArbor = realArborParser.arbor;
+writeObject(ARBOR_REF_PATH + '/arbor.json',realArbor);
+
 const realSynapseClustering = new SynapseClustering(
   realArbor, realArborParser.positions, realArborParser.createSynapseMap(), LAMBDA
 );
+writeObject(CLUSTERING_REF_PATH + '/synapseclustering.json', realSynapseClustering);
 
 const synapseMap = realArborParser.createSynapseMap();
 writeObject(PARSER_REF_PATH + '/create_synapse_map.json', synapseMap);

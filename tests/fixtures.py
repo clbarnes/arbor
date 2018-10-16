@@ -7,7 +7,7 @@ import pytest
 from arbor.arbor import ArborClassic, ArborNX
 from arbor.arborparser import ArborParser
 
-from tests.utils import convert_json
+from tests.utils import from_jso
 
 TEST_SKELETON = 3034133
 DATA_ROOT = Path(__file__).absolute().parent / "fixture_data"
@@ -23,7 +23,7 @@ def load_json(path_item, *path_items, parse_keys=True, parse_strings=True):
         obj = json.load(f)
 
     if parse_keys:
-        return convert_json(obj, parse_strings=parse_strings)
+        return from_jso(obj, parse_strings=parse_strings)
     else:
         return obj
 
@@ -57,8 +57,15 @@ def real_arbor_parser(arbor_class, compact_arbor):
     parser = ArborParser()
     parser.arbor_class = arbor_class
     parser.init("compact-arbor", compact_arbor)
+    return parser
 
 
 @pytest.fixture
 def real_arbor(real_arbor_parser):
     return real_arbor_parser.arbor
+
+
+def get_expected(path_item, *path_items):
+    path_items = [path_item] + list(path_items)
+    path_items[-1] += '.json'
+    return load_json(str(TEST_SKELETON), 'reference', *path_items)
