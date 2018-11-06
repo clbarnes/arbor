@@ -498,7 +498,7 @@ class SynapseClustering:
         all_dists_to_closest_above = arbor.nodes_distance_to(
             closest_to_root, location_dict=positions
         )
-        dist_to_closest_above = {key: all_dists_to_closest_above[key] for key in above}
+        dist_to_closest_above = {key: all_dists_to_closest_above.distances[key] for key in above}
         max_dist_to_closest_above = max(dist_to_closest_above.values())
 
         # nodes whose distance from the closest-to-root above node is in the top 50%
