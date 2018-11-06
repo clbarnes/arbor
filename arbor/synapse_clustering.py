@@ -61,8 +61,8 @@ class SynapseClustering:
         self.synapses = synapses
         self.lambda_ = lambda_
 
-        # list of lists of treenode IDs, sorted from smaller to larger lists
-        self.partitions = arbor.partition_sorted()
+        # list of lists of treenode IDs, where the last contains the root
+        self.partitions = list(arbor.partition())[::-1]
 
         # dict of treenode ID vs cable length to the root node
         self.distances_to_root = arbor.nodes_distance_to(
@@ -119,9 +119,7 @@ class SynapseClustering:
             return self._distance_map_classic()
 
     def _distance_map_classic(self):
-        raise NotImplementedError(
-            "Implementation is not correct - probably because of the order of partitions"
-        )
+        """WARNING: really slow"""
         # treenode ID -> list of distances to treenodes with synapses
         distances = defaultdict(list)
 
@@ -185,7 +183,10 @@ class SynapseClustering:
                             child_distances.append(prev_distance + distance)
 
                         downstream_nodes.append(child_id)
-                        del seen_downstream_nodes[treenode_id]
+                        try:
+                            del seen_downstream_nodes[treenode_id]
+                        except KeyError:
+                            pass
 
                 translated_prev_distances = []
 
@@ -498,7 +499,9 @@ class SynapseClustering:
         all_dists_to_closest_above = arbor.nodes_distance_to(
             closest_to_root, location_dict=positions
         )
-        dist_to_closest_above = {key: all_dists_to_closest_above.distances[key] for key in above}
+        dist_to_closest_above = {
+            key: all_dists_to_closest_above.distances[key] for key in above
+        }
         max_dist_to_closest_above = max(dist_to_closest_above.values())
 
         # nodes whose distance from the closest-to-root above node is in the top 50%

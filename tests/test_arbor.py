@@ -136,7 +136,7 @@ def assert_equivalent_partitions(test, ref):
 
 
 def test_partition(simple_arbor):
-    partitions = simple_arbor.partition()
+    partitions = list(simple_arbor.partition())
     assert_equivalent_partitions(partitions, [[5, 4, 3, 2, 1], [8, 7, 6, 3]])
 
 
@@ -145,6 +145,18 @@ def test_partition_real(real_arbor):
     real = real_arbor.partition()
 
     assert_equivalent_partitions(real, expected)
+
+
+def test_partition_features(real_arbor):
+    visited = set()
+    for partition in real_arbor.partition():
+        if not visited:
+            assert partition[-1] == real_arbor.root
+        else:
+            assert partition[-1] in visited
+            assert len(visited.intersection(partition)) == 1
+
+        visited.update(partition)
 
 
 def test_flow_centrality_real(real_arbor_parser):

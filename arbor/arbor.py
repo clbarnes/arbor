@@ -16,6 +16,7 @@ from typing import (
     Tuple,
     Set,
     NamedTuple,
+    Iterator,
 )
 
 import networkx as nx
@@ -298,7 +299,7 @@ class BaseArbor(metaclass=ABCMeta):
                                 partitions.append(item)
 
         assert len(partitions) == len(ends)
-        return partitions
+        yield from partitions
 
     def flow_centrality(
         self, targets: Dict[int, int], sources: Dict[int, int]
@@ -367,9 +368,39 @@ class BaseArbor(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
+def first_intersection(path1, path2):
+    path1 = set(path1)
+    for node in path2:
+        if node in path1:
+            return node
+    raise ValueError("Paths do not intersect")
+
+
+class PairKeyDict(dict):
+    def _sort_key(self, key):
+        return tuple(sorted(key))
+
+    def __getitem__(self, item):
+        key = self._sort_key(item)
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        key = self._sort_key(key)
+        return super().__setitem__(key, value)
+
+    def __contains__(self, item):
+        key = self._sort_key(item)
+        return super().__contains__(key)
+
+    def __delitem__(self, key):
+        key = self._sort_key(key)
+        return super().__delitem__(key)
+
+
 class ArborNX(BaseArbor):
     def __init__(self):
         self._root = None
+        self._edges = None
 
         # DiGraph with edges pointing towards root
         self._disto_proximal = nx.OrderedDiGraph()
@@ -391,8 +422,11 @@ class ArborNX(BaseArbor):
 
     @property
     def edges(self):
-        # generator is necessary due to networkx weirdness
-        return dict(kv for kv in self._disto_proximal.edges())
+        if self._edges is None:
+            # generator is necessary due to networkx weirdness
+            self._edges = dict(kv for kv in self._disto_proximal.edges())
+
+        return self._edges
 
     def find_root(self) -> Optional[int]:
         for node_id, degree in self._disto_proximal.out_degree:
@@ -402,6 +436,7 @@ class ArborNX(BaseArbor):
     def add_edges(
         self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]] = None
     ):
+        self._edges = None
         if not accessor:
 
             def accessor(node_id, idx):
@@ -415,11 +450,13 @@ class ArborNX(BaseArbor):
         )
 
     def add_edge_pairs(self, *distal_proximal_ids: Tuple[int, int]) -> BaseArbor:
+        self._edges = None
         self._disto_proximal.add_edges_from(distal_proximal_ids)
         self.root = self.find_root()
         return self
 
     def add_path(self, path: Sequence[int]) -> BaseArbor:
+        self._edges = None
         distal_iter, proximal_iter = tee(path)
         possible_root = next(distal_iter, None)
 
@@ -432,6 +469,7 @@ class ArborNX(BaseArbor):
 
     def reroot(self, new_root: int) -> BaseArbor:
         if self.root is not None:
+            self._edges = None
             srcs, tgts = tee(nx.shortest_path(self._undirected, self.root, new_root))
             next(tgts)
             for src, tgt in zip(srcs, tgts):
@@ -468,21 +506,23 @@ class ArborNX(BaseArbor):
 
     def partition(self):
         branches, ends = self.find_branch_and_end_nodes()
-        all_paths = nx.shortest_path(self._undirected, target=self.root)
-        paths = sorted((all_paths[src] for src in ends), key=len, reverse=True)
-        visited = set()
-        partitions = []
-        for path in paths:
-            partition = []
-            for node in path:
-                partition.append(node)
-                if node in visited:
-                    assert node in branches
-                    break
-                visited.add(node)
-            partitions.append(partition)
+        visited_branches = {k: False for k in branches}
 
-        return partitions
+        all_paths = nx.shortest_path(self._undirected, target=self.root)
+
+        for end in sorted(ends, reverse=True):
+            path = []
+            for node in all_paths[end]:
+                path.append(node)
+                value = visited_branches.get(node)
+                if value is None:
+                    continue
+                elif value:
+                    break
+                else:
+                    visited_branches[node] = True
+
+            yield path
 
     def nodes_distance_to(
         self,
@@ -506,7 +546,8 @@ class ArborNX(BaseArbor):
         self,
         distance_fn: Optional[Callable] = None,
         location_dict: Optional[Dict[int, np.ndarray]] = None,
-    ) -> Dict[int, Dict[int, float]]:
+    ) -> Iterator[Tuple[int, Dict[int, float]]]:
+        """WARNING: really slow"""
         self._populate_edge_length(distance_fn, location_dict)
         return nx.shortest_path_length(self._undirected, weight=self._length_key)
 
