@@ -36,10 +36,7 @@ class NodesDistanceTo:
         return max(self.distances.values())
 
     def to_dict(self):
-        return {
-            "distances": self.distances,
-            "max": self.max,
-        }
+        return {"distances": self.distances, "max": self.max}
 
 
 class BranchAndEndNodes(NamedTuple):
@@ -54,7 +51,7 @@ class BranchAndEndNodes(NamedTuple):
         return {
             "branches": self.branches,
             "ends": sorted(self.ends),
-            "n_branches": self.n_branches
+            "n_branches": self.n_branches,
         }
 
 
@@ -71,7 +68,7 @@ class FlowCentrality:
         return {
             "centrifugal": self.centrifugal,
             "centripetal": self.centripetal,
-            "sum": self.sum
+            "sum": self.sum,
         }
 
 
@@ -87,7 +84,9 @@ def assert_rooted_tree(g: nx.DiGraph, root: Optional[int]):
     -------
 
     """
-    assert nx.is_connected(g.to_undirected(as_view=True)), 'Arbor is not fully-connected'
+    assert nx.is_connected(
+        g.to_undirected(as_view=True)
+    ), "Arbor is not fully-connected"
     assert nx.is_directed_acyclic_graph(g), "Arbor is not a DAG"
 
     in_degree = dict(g.in_degree)
@@ -96,24 +95,28 @@ def assert_rooted_tree(g: nx.DiGraph, root: Optional[int]):
     assert len(roots) == 1, f"Arbor has {len(roots)} roots: {roots}"
 
     if root is not None:
-        assert root == roots[0], f"Explicit root ({root}) is not implicit root ({roots[0]})"
+        assert (
+            root == roots[0]
+        ), f"Explicit root ({root}) is not implicit root ({roots[0]})"
 
-    assert all(d <= 1 for d in in_degree.values()), f"Some nodes have more than one proximal neighbour"
+    assert all(
+        d <= 1 for d in in_degree.values()
+    ), f"Some nodes have more than one proximal neighbour"
 
 
 class BaseArbor(metaclass=ABCMeta):
     def to_dict(self):
-        return {'root': self.root, 'edges': self.edges}
+        return {"root": self.root, "edges": self.edges}
 
     def _assert_valid(self):
         if self.edges:
-            assert self.root is not None, 'Edges exist but root not set'
+            assert self.root is not None, "Edges exist but root not set"
 
         proximo_distal = nx.DiGraph()
         proximo_distal.add_node(self.root)
         for distal, proximal in self.edges.items():
-            assert isinstance(distal, int), f'Node {distal} is not an integer'
-            assert isinstance(proximal, int), f'Node {proximal} is not an integer'
+            assert isinstance(distal, int), f"Node {distal} is not an integer"
+            assert isinstance(proximal, int), f"Node {proximal} is not an integer"
             proximo_distal.add_edge(proximal, distal)
 
         assert_rooted_tree(proximo_distal, self.root)
@@ -334,7 +337,10 @@ class BaseArbor(metaclass=ABCMeta):
                     seen_tgt += targets.get(node_id, 0)
                     if idx == len(partition) - 1:
                         # node is the root, or a branch being addressed for the first time
-                        node_to_counts[node_id] = {"seen_src": seen_src, "seen_tgt": seen_tgt}
+                        node_to_counts[node_id] = {
+                            "seen_src": seen_src,
+                            "seen_tgt": seen_tgt,
+                        }
                 else:
                     # node is a branch point which has been addressed before
                     counts["seen_src"] += seen_src

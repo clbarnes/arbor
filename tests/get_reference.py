@@ -21,7 +21,7 @@ def get_file(url):
     return b.decode()
 
 
-template_path = DATA_ROOT / 'template.js'
+template_path = DATA_ROOT / "template.js"
 skel_root = DATA_ROOT / str(TEST_SKELETON)
 arbor_path = skel_root / "compact-arbor.json"
 skeleton_path = skel_root / "compact-skeleton.json"
@@ -34,9 +34,9 @@ def main(force=False):
     if not force and reference_path.is_dir():
         return
 
-    arbor_ref_path = reference_path / 'arbor'
-    parser_ref_path = reference_path / 'arbor_parser'
-    clustering_ref_path = reference_path / 'synapse_clustering'
+    arbor_ref_path = reference_path / "arbor"
+    parser_ref_path = reference_path / "arbor_parser"
+    clustering_ref_path = reference_path / "synapse_clustering"
 
     s = template.format(
         arbor_js=get_file(ARBOR_URL),
@@ -59,10 +59,10 @@ def main(force=False):
     with open(script_path, "w") as f:
         f.write(s)
 
-    subprocess.run(['node', str(script_path)])
+    subprocess.run(["node", str(script_path)])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser("get_reference")
     parser.add_argument("-f", "--force", action="store_true", help="Replace existing")
 

@@ -67,5 +67,5 @@ def real_arbor(real_arbor_parser):
 
 def get_expected(path_item, *path_items):
     path_items = [path_item] + list(path_items)
-    path_items[-1] += '.json'
-    return load_json(str(TEST_SKELETON), 'reference', *path_items)
+    path_items[-1] += ".json"
+    return load_json(str(TEST_SKELETON), "reference", *path_items)

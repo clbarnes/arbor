@@ -54,14 +54,22 @@ class ArborParser:
 
     def to_dict(self):
         d = {
-            key: getattr(self, key, None) for key in [
-                'inputs', 'outputs', 'n_outputs', 'n_inputs', 'n_presynaptic_sites',
-                'n_postsynaptic_sites', 'input_partners', 'output_partners',
-                'n_input_connectors', 'n_output_connectors'
+            key: getattr(self, key, None)
+            for key in [
+                "inputs",
+                "outputs",
+                "n_outputs",
+                "n_inputs",
+                "n_presynaptic_sites",
+                "n_postsynaptic_sites",
+                "input_partners",
+                "output_partners",
+                "n_input_connectors",
+                "n_output_connectors",
             ]
         }
-        d['arbor'] = self.arbor.to_dict()
-        d['positions'] = {key: list(value) for key, value in self.positions.items()}
+        d["arbor"] = self.arbor.to_dict()
+        d["positions"] = {key: list(value) for key, value in self.positions.items()}
         return d
 
     def init(self, url: ValidSkeletonUrl, json: Jso) -> ArborParser:

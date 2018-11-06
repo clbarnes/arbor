@@ -55,7 +55,7 @@ def to_jso_like(obj):
         new = [to_jso_like(item) for item in obj]
     elif isinstance(obj, dict):
         new = {to_jso_like(key): to_jso_like(value) for key, value in obj.items()}
-    elif hasattr(obj, 'to_dict'):
+    elif hasattr(obj, "to_dict"):
         new = to_jso_like(obj.to_dict())
     else:
         raise TypeError(

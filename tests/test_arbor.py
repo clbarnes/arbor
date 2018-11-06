@@ -8,11 +8,16 @@ import pytest
 from arbor import ArborClassic, ArborNX
 from arbor.arbor import FlowCentrality, assert_rooted_tree
 from tests.fixtures import (
-    arbor_class, simple_arbor, real_arbor_parser, compact_arbor, get_expected, real_arbor
+    arbor_class,
+    simple_arbor,
+    real_arbor_parser,
+    compact_arbor,
+    get_expected,
+    real_arbor,
 )
 from tests.utils import to_jso_like
 
-FIXTURE_DIR = 'arbor'
+FIXTURE_DIR = "arbor"
 
 
 def test_instantiate(arbor_class):
@@ -20,7 +25,7 @@ def test_instantiate(arbor_class):
 
 
 def test_setup_correctly(real_arbor):
-    expected = get_expected(FIXTURE_DIR, 'arbor')
+    expected = get_expected(FIXTURE_DIR, "arbor")
     real = real_arbor.to_dict()
     assert real == expected
 
@@ -81,11 +86,11 @@ def test_find_branch_end_nodes(simple_arbor):
 
 def test_find_branch_end_nodes_real(real_arbor):
     real = real_arbor.find_branch_and_end_nodes()
-    expected = get_expected(FIXTURE_DIR, 'find_branch_and_end_nodes')
+    expected = get_expected(FIXTURE_DIR, "find_branch_and_end_nodes")
 
-    assert real.branches == expected['branches']
-    assert sorted(real.ends) == sorted(expected['ends'])
-    assert real.n_branches == expected['n_branches']
+    assert real.branches == expected["branches"]
+    assert sorted(real.ends) == sorted(expected["ends"])
+    assert real.n_branches == expected["n_branches"]
 
 
 def test_nodes_distance_to_simple(simple_arbor):
@@ -144,10 +149,7 @@ def assert_equivalent_partitions(test, ref):
 
 def test_partition(simple_arbor):
     partitions = simple_arbor.partition()
-    assert_equivalent_partitions(partitions, [
-        [5, 4, 3, 2, 1],
-        [8, 7, 6, 3],
-    ])
+    assert_equivalent_partitions(partitions, [[5, 4, 3, 2, 1], [8, 7, 6, 3]])
 
 
 def test_partition_real(real_arbor):
