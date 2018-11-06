@@ -25,12 +25,12 @@ test-quick: fetch-ref
 
 .PHONY: fmt
 fmt:
-	black arbor tests
+	black arbor tests setup.py
 
 .PHONY: lint
 lint:
 	flake8 arbor tests
-	black --check arbor tests
+	black --check arbor tests setup.py
 
 .PHONY: clean
 clean:

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for fpath in $(git diff --cached --name-only --diff-filter=ACM | grep -P "\.pyi?$")
+do
+    black fpath
+    git add fpath
+done
+
+make lint

@@ -497,7 +497,9 @@ class ArborNX(BaseArbor):
         self._populate_edge_length(distance_fn, location_dict)
 
         return NodesDistanceTo(
-            nx.shortest_path_length(self._undirected, target=root, weight=self._length_key)
+            nx.shortest_path_length(
+                self._undirected, target=root, weight=self._length_key
+            )
         )
 
     def _all_distances(
