@@ -53,8 +53,8 @@ def combine_dicts(*dicts):
     return dict(out)
 
 
-@pytest.fixture(scope="session")
-def _real_syn_clus(real_arbor_parser, pytestconfig):
+@pytest.fixture
+def real_syn_clus(real_arbor_parser, pytestconfig):
     if pytestconfig.getoption("--skipslow"):
         pytest.skip("synapse clustering tests are slow, and --skipslow was used")
 
@@ -63,12 +63,6 @@ def _real_syn_clus(real_arbor_parser, pytestconfig):
     return SynapseClustering(
         real_arbor_parser.arbor, real_arbor_parser.positions, synapses, LAMBDA
     )
-
-
-@pytest.fixture
-def real_syn_clus(_real_syn_clus):
-    """Hack to get around the (temporarily) slow instantiation of SynapseClustering"""
-    return deepcopy(_real_syn_clus)
 
 
 def test_instantiate_real(real_syn_clus: SynapseClustering):
