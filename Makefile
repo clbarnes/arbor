@@ -13,7 +13,7 @@ check-node:
 
 .PHONY: fetch-ref
 fetch-ref: check-node
-	python tests/get_reference.py
+	cd tests && python get_reference.py
 
 .PHONY: test
 test: fetch-ref

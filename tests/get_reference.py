@@ -1,10 +1,14 @@
 import subprocess
 from argparse import ArgumentParser
+import sys
+import os
 
 from urllib.request import urlopen
 
+# allow this script to be run from anywhere
+sys.path.insert(0, os.path.abspath('..'))
 
-from tests.constants import LAMBDA, FRACTION, DATA_ROOT, TEST_SKELETON
+from tests.constants import LAMBDA, FRACTION, DATA_ROOT, TEST_SKELETON  # noqa
 
 BRANCH = "master"
 REPO_URL = f"https://raw.githubusercontent.com/catmaid/CATMAID/{BRANCH}"
