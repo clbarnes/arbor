@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import defaultdict
 from enum import Enum
 from numbers import Number
-from typing import TypeVar, Dict, List, Optional, Type
+from typing import TypeVar, Dict, List, Optional
 
 import numpy as np
 

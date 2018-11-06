@@ -3,10 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from numbers import Number
 
-import itertools
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict, Counter
-from functools import lru_cache
+from collections import defaultdict
 from itertools import tee
 from typing import (
     Optional,

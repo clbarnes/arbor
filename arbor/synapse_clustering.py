@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, NamedTuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any
 
 import networkx as nx
 import numpy as np

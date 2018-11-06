@@ -11,7 +11,7 @@ FIXTURE_DIR = "arbor"
 
 
 def test_instantiate(arbor_class):
-    arbor = arbor_class()
+    arbor_class()
 
 
 def test_setup_correctly(real_arbor):
