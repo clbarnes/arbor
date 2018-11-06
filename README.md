@@ -1,12 +1,14 @@
 # arbor.py
 
-A fairly honest reimplementation of 
+An implementation of 
 [Arbor.js](https://github.com/catmaid/CATMAID/blob/master/django/applications/catmaid/static/libs/catmaid/Arbor.js)
- and related tools, for Python 3.7+
+and related tools, for Python 3.7+
  
 # Notes
 
-Tests of functions which run very slowly are skipped by default; use `pytest --runslow`
+Tests of functions which run very slowly are skipped by default; 
+use `pytest --skipslow` to skip them, 
+and `@pytest.mark.slow` to mark new tests as slow.
 
 # Contributing
 
