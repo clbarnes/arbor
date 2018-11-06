@@ -1,0 +1,12 @@
+language: python
+sudo: required
+dist: xenial
+python: "3.7"
+
+before_install:
+  - nvm install node
+  - make fetch-ref
+install: make install-dev
+script:
+  - make test
+  - make lint

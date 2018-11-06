@@ -1,4 +1,5 @@
 import subprocess
+from argparse import ArgumentParser
 
 from urllib.request import urlopen
 
@@ -30,7 +31,7 @@ template = template_path.read_text()
 
 
 def main(force=False):
-    if not force and reference_path.is_file():
+    if not force and reference_path.is_dir():
         return
 
     arbor_ref_path = reference_path / 'arbor'
@@ -62,4 +63,9 @@ def main(force=False):
 
 
 if __name__ == '__main__':
-    main(True)
+    parser = ArgumentParser("get_reference")
+    parser.add_argument("-f", "--force", action="store_true", help="Replace existing")
+
+    parsed_args = parser.parse_args()
+
+    main(parsed_args.force)
