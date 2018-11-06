@@ -17,7 +17,11 @@ fetch-ref: check-node
 
 .PHONY: test
 test: fetch-ref
-	pytest
+	pytest -v
+
+.PHONY: test-all
+test-quick: fetch-ref
+	pytest -v --skipslow
 
 .PHONY: fmt
 fmt:
