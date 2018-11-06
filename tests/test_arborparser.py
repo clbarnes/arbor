@@ -1,6 +1,6 @@
 from arbor.arborparser import ArborParser
 
-from tests.utils import get_expected
+from .utils import get_expected
 
 FIXTURE_DIR = "arbor_parser"
 

@@ -3,8 +3,8 @@ import pytest
 from arbor.arbor import ArborClassic, ArborNX  # noqa
 from arbor.arborparser import ArborParser
 
-from tests.utils import load_json
-from tests.constants import TEST_SKELETON
+from .utils import load_json
+from .constants import TEST_SKELETON
 
 
 @pytest.fixture

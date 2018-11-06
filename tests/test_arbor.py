@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from arbor.arbor import FlowCentrality, assert_rooted_tree
-from tests.utils import to_jso_like, get_expected
+from .utils import to_jso_like, get_expected
 
 FIXTURE_DIR = "arbor"
 

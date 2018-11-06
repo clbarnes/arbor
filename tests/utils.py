@@ -2,7 +2,7 @@ import os
 import json
 from numbers import Number
 
-from tests.constants import TEST_SKELETON, DATA_ROOT
+from .constants import TEST_SKELETON, DATA_ROOT
 
 
 def parse_key(key):
