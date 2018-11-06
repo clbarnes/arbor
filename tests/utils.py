@@ -75,6 +75,12 @@ def get_expected(path_item, *path_items):
     return load_json(str(TEST_SKELETON), "reference", *path_items)
 
 
+def assert_same(test, *ref_path_items):
+    expected = get_expected(*ref_path_items)
+    real_jso = to_jso_like(test)
+    assert real_jso, expected
+
+
 def fixture_path(path_item, *path_items):
     return os.path.join(DATA_ROOT, path_item, *path_items)
 

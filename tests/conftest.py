@@ -7,6 +7,22 @@ from tests.utils import load_json
 from tests.constants import TEST_SKELETON
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skipslow", action="store_true", default=False, help="skip slow tests"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("--skipslow"):
+        # --runslow given in cli: do not skip slow tests
+        return
+    skip_slow = pytest.mark.skip(reason="--skipslow was used")
+    for item in items:
+        if "slow" in item.keywords:
+            item.add_marker(skip_slow)
+
+
 @pytest.fixture
 def compact_arbor():
     return load_json(str(TEST_SKELETON), "compact-arbor.json")

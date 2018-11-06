@@ -1,14 +1,13 @@
 import math
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Any
 
 import networkx as nx
 import numpy as np
 
 from arbor.arbor import BaseArbor, ArborNX, FlowCentrality
 from arbor.arborparser import ArborParser
-from arbor.common import ValidRelType
 
 
 def id_generator(start=0):
@@ -43,7 +42,7 @@ class SynapseClustering:
         self,
         arbor: ArborNX,
         locations: Dict[int, np.ndarray],
-        synapses: Dict[int, List[Tuple[ValidRelType, int]]],
+        synapses: Dict[int, int],
         lambda_: float,
     ):
         """
@@ -70,7 +69,7 @@ class SynapseClustering:
             location_dict=self.locations
         ).distances
 
-        self.distances = self.distance_map()
+        self._distances = None
 
     def to_dict(self):
         return {
@@ -83,6 +82,12 @@ class SynapseClustering:
             "Ds": self.distances,
         }
 
+    @property
+    def distances(self):
+        if self._distances is None:
+            self._distances = self.distance_map()
+        return self._distances
+
     def distance_map(self):
         """
         Compute a distance map, where each skeleton treenode is a key, and its value
@@ -90,6 +95,8 @@ class SynapseClustering:
 
         Operates in O((3+2+4+2+2+1)n) + n*log(n) + n*m, where n is number of treenodes
         and m is number of synapses.
+
+        The networkx implementation is really, really slow.
 
         Returns
         -------
@@ -112,7 +119,9 @@ class SynapseClustering:
             return self._distance_map_classic()
 
     def _distance_map_classic(self):
-        raise NotImplementedError("Implementation is not correct")
+        raise NotImplementedError(
+            "Implementation is not correct - probably because of the order of partitions"
+        )
         # treenode ID -> list of distances to treenodes with synapses
         distances = defaultdict(list)
 

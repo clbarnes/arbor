@@ -4,8 +4,8 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from arbor.arbor import FlowCentrality, assert_rooted_tree
-from tests.utils import to_jso_like, get_expected
+from arbor.arbor import assert_rooted_tree
+from tests.utils import get_expected, assert_same
 
 FIXTURE_DIR = "arbor"
 
@@ -15,9 +15,7 @@ def test_instantiate(arbor_class):
 
 
 def test_setup_correctly(real_arbor):
-    expected = get_expected(FIXTURE_DIR, "arbor")
-    real = real_arbor.to_dict()
-    assert real == expected
+    assert_same(real_arbor, FIXTURE_DIR, "arbor")
 
 
 def test_add_edge_pairs(arbor_class):
@@ -149,27 +147,9 @@ def test_partition_real(real_arbor):
     assert_equivalent_partitions(real, expected)
 
 
-def test_flow_centrality(simple_arbor):
-    sources = {4: 2}
-    targets = {7: 3, 4: 1}
-    fc = simple_arbor.flow_centrality(targets, sources)
-    assert fc == {  # tested with JS implementation
-        5: FlowCentrality(centrifugal=0, centripetal=0),
-        4: FlowCentrality(centrifugal=6, centripetal=0),
-        3: FlowCentrality(centrifugal=0, centripetal=0),
-        8: FlowCentrality(centrifugal=0, centripetal=0),
-        7: FlowCentrality(centrifugal=0, centripetal=6),
-        6: FlowCentrality(centrifugal=0, centripetal=6),
-        2: FlowCentrality(centrifugal=0, centripetal=0),
-        1: FlowCentrality(centrifugal=0, centripetal=0),
-    }
-
-
 def test_flow_centrality_real(real_arbor_parser):
-    expected = get_expected(FIXTURE_DIR, "flow_centrality")
     sources = real_arbor_parser.inputs
     targets = real_arbor_parser.outputs
     real = real_arbor_parser.arbor.flow_centrality(targets, sources)
 
-    jso_real = to_jso_like(real)
-    assert expected == jso_real
+    assert_same(real, FIXTURE_DIR, "flow_centrality")

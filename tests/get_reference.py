@@ -6,7 +6,7 @@ import os
 from urllib.request import urlopen
 
 # allow this script to be run from anywhere
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath(".."))
 
 from tests.constants import LAMBDA, FRACTION, DATA_ROOT, TEST_SKELETON  # noqa
 

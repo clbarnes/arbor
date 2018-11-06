@@ -364,7 +364,7 @@ class BaseArbor(metaclass=ABCMeta):
 
     def sub_arbor(self, new_root: int) -> BaseArbor:
         """Return a new arbor which is a shallow copy of this arbor, starting at the given node"""
-        pass
+        raise NotImplementedError()
 
 
 class ArborNX(BaseArbor):
