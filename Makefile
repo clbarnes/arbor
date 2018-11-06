@@ -1,9 +1,9 @@
 .PHONY: install
-install:
+install: clean
 	pip install .
 
 .PHONY: install-dev
-install-dev:
+install-dev: clean
 	pip install -r requirements.txt
 	pip install -e .
 
@@ -27,3 +27,9 @@ fmt:
 lint:
 	flake8 arbor tests
 	black --check arbor tests
+
+.PHONY: clean
+clean:
+	rm -rf .eggs
+	rm -rf .pytest_cache
+	rm -rf *.egg-info

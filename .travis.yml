@@ -8,5 +8,5 @@ before_install:
   - make fetch-ref
 install: make install-dev
 script:
-  - make test
+  - make tests
   - make lint
