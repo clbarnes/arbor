@@ -1,4 +1,8 @@
+import os
+import json
 from numbers import Number
+
+from tests.constants import TEST_SKELETON, DATA_ROOT
 
 
 def parse_key(key):
@@ -63,3 +67,24 @@ def to_jso_like(obj):
         )
 
     return new
+
+
+def get_expected(path_item, *path_items):
+    path_items = [path_item] + list(path_items)
+    path_items[-1] += ".json"
+    return load_json(str(TEST_SKELETON), "reference", *path_items)
+
+
+def fixture_path(path_item, *path_items):
+    return os.path.join(DATA_ROOT, path_item, *path_items)
+
+
+def load_json(path_item, *path_items, parse_keys=True, parse_strings=True):
+    """Get JSON data from fixture file"""
+    with open(fixture_path(path_item, *path_items)) as f:
+        obj = json.load(f)
+
+    if parse_keys:
+        return from_jso(obj, parse_strings=parse_strings)
+    else:
+        return obj

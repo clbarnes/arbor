@@ -1,21 +1,11 @@
-import itertools
 from collections import Counter
 
 import networkx as nx
 import numpy as np
 import pytest
 
-from arbor import ArborClassic, ArborNX
 from arbor.arbor import FlowCentrality, assert_rooted_tree
-from tests.fixtures import (
-    arbor_class,
-    simple_arbor,
-    real_arbor_parser,
-    compact_arbor,
-    get_expected,
-    real_arbor,
-)
-from tests.utils import to_jso_like
+from tests.utils import to_jso_like, get_expected
 
 FIXTURE_DIR = "arbor"
 

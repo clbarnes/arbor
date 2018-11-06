@@ -3,8 +3,7 @@ from argparse import ArgumentParser
 
 from urllib.request import urlopen
 
-from tests.fixtures import DATA_ROOT, TEST_SKELETON
-from tests.constants import LAMBDA, FRACTION
+from tests.constants import LAMBDA, FRACTION, DATA_ROOT, TEST_SKELETON
 
 BRANCH = "master"
 REPO_URL = f"https://raw.githubusercontent.com/catmaid/CATMAID/{BRANCH}"

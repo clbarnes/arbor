@@ -1,9 +1,7 @@
 import numpy as np
 import pytest
 
-from arbor import SynapseClustering, RelationType, ArborClassic
-
-from tests.test_arbor import simple_arbor, arbor_class
+from arbor import SynapseClustering, RelationType
 
 
 @pytest.fixture

@@ -1,14 +1,6 @@
 from arbor.arborparser import ArborParser
 
-from tests.fixtures import (
-    compact_arbor,
-    compact_skeleton,
-    get_expected,
-    arbor_class,
-    real_arbor_parser,
-    compact_arbor,
-)
-
+from tests.utils import get_expected
 
 FIXTURE_DIR = "arbor_parser"
 
