@@ -1,8 +1,9 @@
 import os
 import json
 from numbers import Number
+import subprocess as sp
 
-from tests.constants import TEST_SKELETON, DATA_ROOT
+from tests.constants import TEST_SKELETON
 
 
 def parse_key(key):
@@ -81,16 +82,28 @@ def assert_same(test, *ref_path_items):
     assert real_jso, expected
 
 
-def fixture_path(path_item, *path_items):
-    return os.path.join(DATA_ROOT, path_item, *path_items)
+# def fixture_path(path_item, *path_items):
+#     return os.path.join(DATA_ROOT, path_item, *path_items)
 
 
 def load_json(path_item, *path_items, parse_keys=True, parse_strings=True):
     """Get JSON data from fixture file"""
-    with open(fixture_path(path_item, *path_items)) as f:
+    path = os.path.join(path_item, *path_items)
+    if not path.endswith(".json"):
+        path += ".json"
+
+    with open(path) as f:
         obj = json.load(f)
 
     if parse_keys:
         return from_jso(obj, parse_strings=parse_strings)
     else:
         return obj
+
+
+def node_version():
+    result = sp.run(["node", "--version"], stdout=sp.PIPE, text=True)
+    if result.returncode:
+        raise RuntimeError("node --version failed: is node.js installed?")
+    ver_str = result.stdout.strip().strip("v")
+    return tuple(int(i) for i in ver_str.split("."))

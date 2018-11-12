@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 
 import networkx as nx
 import numpy as np
@@ -223,18 +223,11 @@ class SynapseClustering:
             key: len(value) for key, value in self.clusters(density_hill_map).items()
         }
 
-    def cluster_maps(self, density_hill_map) -> Dict[int, Dict[int, bool]]:
-        """Density hill ID to dict of treenode ID to True"""
-        return {
-            key: {ikey: True for ikey in value}
-            for key, value in self.clusters(density_hill_map).items()
-        }
-
-    def clusters(self, density_hill_map: Dict[int, int]) -> Dict[int, List[int]]:
-        """Density hill ID to list of treenode IDs"""
-        clusters = defaultdict(list)
+    def clusters(self, density_hill_map: Dict[int, int]) -> Dict[int, Set[int]]:
+        """Density hill ID to set of treenode IDs"""
+        clusters = defaultdict(set)
         for treenode_id, hill_id in density_hill_map.items():
-            clusters[hill_id].append(treenode_id)
+            clusters[hill_id].add(treenode_id)
         return dict(clusters)
 
     def density_hill_map(self) -> Dict[int, int]:
@@ -371,7 +364,7 @@ class SynapseClustering:
 
     def segregation_index(
         self,
-        clusters: Dict[int, List[int]],
+        clusters: Dict[int, Set[int]],
         outputs: Dict[int, int],
         inputs: Dict[int, int],
     ):

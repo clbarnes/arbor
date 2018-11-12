@@ -4,7 +4,7 @@
 
 An implementation of 
 [Arbor.js](https://github.com/catmaid/CATMAID/blob/master/django/applications/catmaid/static/libs/catmaid/Arbor.js)
-and related tools, for Python 3.7+
+and related tools, for Python 3.7+ (tests also require node.js, preferably v11+)
  
 N.B. This is a work in progress, but isn't really being worked on (by me, anyway):
 it will eventually be replaced by bindings to a rust implementation which could also be used in the frontend as WASM.
@@ -23,6 +23,18 @@ and runs the linter.
 
 ## Notes
 
-Tests of functions which run very slowly are skipped by default; 
+Test results and benchmarks are compared to the original javascript implementation, run in node.
+This test harness is a git submodule which may need to be pulled in, installed and then populated with
+
+```bash
+git submodules --init --recursive
+cd tests/arbor-harness
+npm install
+npm start
+```
+
+althought `make test` should do all of this for you.
+
+Tests of functions which run very slowly are run by default; 
 use `pytest --skipslow` to skip them, 
 and `@pytest.mark.slow` to mark new tests as slow.

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from arbor.arbor import assert_rooted_tree
-from tests.utils import get_expected, assert_same
+from tests.utils import to_jso_like
 
 FIXTURE_DIR = "arbor"
 
@@ -14,8 +14,10 @@ def test_instantiate(arbor_class):
     arbor_class()
 
 
-def test_setup_correctly(real_arbor):
-    assert_same(real_arbor, FIXTURE_DIR, "arbor")
+def test_setup_correctly(real_arbor, result_factory):
+    expected = result_factory("arbor_parser", "from_compact-arbor").result["arbor"]
+    real_jso = to_jso_like(real_arbor)
+    assert real_jso == expected
 
 
 def test_add_edge_pairs(arbor_class):
@@ -72,9 +74,9 @@ def test_find_branch_end_nodes(simple_arbor):
     assert_same_members(branch_end_nodes.ends, [8, 5])
 
 
-def test_find_branch_end_nodes_real(real_arbor):
+def test_find_branch_end_nodes_real(real_arbor, result_factory):
     real = real_arbor.find_branch_and_end_nodes()
-    expected = get_expected(FIXTURE_DIR, "find_branch_and_end_nodes")
+    expected = result_factory(FIXTURE_DIR, "find_branch_and_end_nodes").result
 
     assert real.branches == expected["branches"]
     assert sorted(real.ends) == sorted(expected["ends"])
@@ -140,8 +142,8 @@ def test_partition(simple_arbor):
     assert_equivalent_partitions(partitions, [[5, 4, 3, 2, 1], [8, 7, 6, 3]])
 
 
-def test_partition_real(real_arbor):
-    expected = get_expected(FIXTURE_DIR, "partition")
+def test_partition_real(real_arbor, result_factory):
+    expected = result_factory(FIXTURE_DIR, "partition").result
     real = real_arbor.partition()
 
     assert_equivalent_partitions(real, expected)
@@ -159,9 +161,11 @@ def test_partition_features(real_arbor):
         visited.update(partition)
 
 
-def test_flow_centrality_real(real_arbor_parser):
+@pytest.mark.slow
+def test_flow_centrality_real(real_arbor_parser, result_factory):
     sources = real_arbor_parser.inputs
     targets = real_arbor_parser.outputs
     real = real_arbor_parser.arbor.flow_centrality(targets, sources)
 
-    assert_same(real, FIXTURE_DIR, "flow_centrality")
+    expected = result_factory(FIXTURE_DIR, "flow_centrality").result
+    assert to_jso_like(real) == expected

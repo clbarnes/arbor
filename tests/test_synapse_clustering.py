@@ -7,8 +7,7 @@ from arbor import SynapseClustering
 from arbor.arborparser import ArborParser
 
 from tests.constants import LAMBDA, FRACTION
-from tests.utils import assert_same
-
+from tests.utils import to_jso_like
 
 FIXTURE_DIR = "synapse_clustering"
 
@@ -44,40 +43,39 @@ def real_syn_clus(real_arbor_parser, pytestconfig):
     )
 
 
-def test_instantiate_real(real_syn_clus: SynapseClustering):
+def test_instantiate_real(real_syn_clus: SynapseClustering, result_factory):
     """Checks that distance_map works, among other things"""
-    assert_same(real_syn_clus, FIXTURE_DIR, "synapseclustering")
+    expected = result_factory(FIXTURE_DIR, "synapse_clustering").result
+    assert to_jso_like(real_syn_clus) == expected
 
 
-def test_density_hill_map_real(real_syn_clus: SynapseClustering):
+def test_density_hill_map_real(real_syn_clus: SynapseClustering, result_factory):
     """depends on test_instantiate_real"""
     dhm = real_syn_clus.density_hill_map()
-    assert_same(dhm, FIXTURE_DIR, "density_hill_map")
+    expected = result_factory(FIXTURE_DIR, "density_hill_map").result
+    assert dhm == expected
 
 
-def test_cluster_sizes_real(real_syn_clus: SynapseClustering):
+def test_cluster_sizes_real(real_syn_clus: SynapseClustering, result_factory):
     """depends on test_density_hill_map_real"""
     dhm = real_syn_clus.density_hill_map()
     csize = real_syn_clus.cluster_sizes(dhm)
-    assert_same(csize, FIXTURE_DIR, "cluster_sizes")
+
+    expected = result_factory(FIXTURE_DIR, "cluster_sizes").result
+    assert csize == expected
 
 
-def test_clusters_real(real_syn_clus: SynapseClustering):
+def test_clusters_real(real_syn_clus: SynapseClustering, result_factory):
     """depends on test_density_hill_map_real"""
     dhm = real_syn_clus.density_hill_map()
     clusters = real_syn_clus.clusters(dhm)
-    assert_same(clusters, FIXTURE_DIR, "clusters")
-
-
-def test_cluster_maps_real(real_syn_clus: SynapseClustering):
-    """depends on test_density_hill_map_real"""
-    dhm = real_syn_clus.density_hill_map()
-    cluster_maps = real_syn_clus.cluster_maps(dhm)
-    assert_same(cluster_maps, FIXTURE_DIR, "cluster_maps")
+    expected = result_factory(FIXTURE_DIR, "clusters").result
+    expected_sets = {k: set(v) for k, v in expected.items()}
+    assert expected_sets == clusters
 
 
 def test_segregation_index_real(
-    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering
+    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering, result_factory
 ):
     """depends on test_clusters_real"""
     dhm = real_syn_clus.density_hill_map()
@@ -85,30 +83,34 @@ def test_segregation_index_real(
     seg_ind = real_syn_clus.segregation_index(
         clusters, real_arbor_parser.outputs, real_arbor_parser.inputs
     )
-    assert_same(seg_ind, FIXTURE_DIR, "segregation_index")
+    expected = result_factory(FIXTURE_DIR, "segregation_index")
+    assert seg_ind == pytest.approx(expected)
 
 
 def test_find_arbor_regions_real(
-    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering
+    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering, result_factory
 ):
     """depends on test_arbor.test_flow_centralities"""
     arbor = real_arbor_parser.arbor
     fcs = arbor.flow_centrality(real_arbor_parser.outputs, real_arbor_parser.inputs)
     arbor_regions = real_syn_clus.find_arbor_regions(fcs, FRACTION, arbor)
-    assert_same(arbor_regions, FIXTURE_DIR, "find_arbor_regions")
+    expected = result_factory(FIXTURE_DIR, "find_arbor_regions").result
+    assert to_jso_like(arbor_regions) == expected
 
 
 def test_find_axon_real(
-    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering
+    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering, result_factory
 ):
     axon = real_syn_clus.find_axon(
         real_arbor_parser, FRACTION, real_arbor_parser.positions
     )
-    assert_same(axon, FIXTURE_DIR, "find_axon")
+    expected = result_factory(FIXTURE_DIR, "find_axon").result
+
+    assert to_jso_like(axon) == expected
 
 
 def test_find_axon_cut_real(
-    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering
+    real_arbor_parser: ArborParser, real_syn_clus: SynapseClustering, result_factory
 ):
     """depends on test_find_arbor_regions_real"""
     arbor = real_arbor_parser.arbor
@@ -122,4 +124,5 @@ def test_find_axon_cut_real(
         arbor=arbor,
     )
 
-    assert_same(axon_cut, FIXTURE_DIR, "find_axon_cut")
+    expected = result_factory(FIXTURE_DIR, "find_axon_cut").result
+    assert to_jso_like(axon_cut) == expected

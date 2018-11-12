@@ -4,8 +4,9 @@ dist: xenial
 python: "3.7"
 
 before_install:
+  - git submodule update --init --recursive
   - nvm install node
-  - make fetch-ref
+  - make harness-populate
 install: make install-dev
 script:
   - make test
