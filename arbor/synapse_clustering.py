@@ -93,11 +93,6 @@ class SynapseClustering:
         Compute a distance map, where each skeleton treenode is a key, and its value
         is an array of calibrated cable distances to all arbor synapses.
 
-        Operates in O((3+2+4+2+2+1)n) + n*log(n) + n*m, where n is number of treenodes
-        and m is number of synapses.
-
-        The networkx implementation is really, really slow.
-
         Returns
         -------
         dict
@@ -105,14 +100,18 @@ class SynapseClustering:
         """
 
         if isinstance(self.arbor, ArborNX):
-            all_distances = self.arbor._all_distances(location_dict=self.locations)
-            sorted_tns = sorted(self.locations)
+            all_distances = self.arbor._all_distances(
+                location_dict=self.locations,
+                cutoff=self.lambda_ * 3
+            )
             d = defaultdict(list)
             for syn_tn, tn_dists in all_distances:
-                if not self.synapses.get(syn_tn):
+                syn_count = self.synapses.get(syn_tn)
+                if not syn_count:
                     continue
-                for tn in sorted_tns:
-                    d[tn].append(tn_dists[tn])
+
+                for tnid, dist in tn_dists.items():
+                    d[tnid].extend(dist for _ in range(syn_count))
 
             return dict(d)
         else:

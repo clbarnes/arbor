@@ -584,7 +584,7 @@ class ArborNX(BaseArbor):
 
         return NodesDistanceTo(
             nx.shortest_path_length(
-                self._undirected, target=root, weight=self._length_key
+                self._disto_proximal, target=root, weight=self._length_key
             )
         )
 
@@ -592,10 +592,11 @@ class ArborNX(BaseArbor):
         self,
         distance_fn: Optional[Callable] = None,
         location_dict: Optional[Dict[int, np.ndarray]] = None,
+        cutoff: Optional[Number]=None,
     ) -> Iterator[Tuple[int, Dict[int, float]]]:
         """WARNING: really slow"""
         self._populate_edge_length(distance_fn, location_dict)
-        return nx.shortest_path_length(self._undirected, weight=self._length_key)
+        return nx.all_pairs_dijkstra_path_length(self._undirected, cutoff, weight=self._length_key)
 
     def all_successors(self) -> Dict[int, List[int]]:
         return {
