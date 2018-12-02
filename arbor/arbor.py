@@ -367,6 +367,52 @@ class BaseArbor(metaclass=ABCMeta):
         """Return a new arbor which is a shallow copy of this arbor, starting at the given node"""
         raise NotImplementedError()
 
+    @abstractmethod
+    def parent(self, node_id):
+        pass
+
+    def strahler_analysis(self):
+        strahler = dict()
+        branches, ends = self.find_branch_and_end_nodes()
+        to_visit = list(ends)
+        strahler.update((n, 1) for n in to_visit)
+        visited_branches = defaultdict(list)  # branch node vs array of strahler indices
+
+        while to_visit:
+            starting_node = to_visit.pop(0)
+            strahler_idx = strahler[starting_node]
+            n_children = branches.get(starting_node)
+            proximal = self.parent(starting_node)
+
+            while proximal:
+                n_children = branches.get(proximal)
+                if n_children:
+                    break
+                strahler[proximal] = strahler_idx
+                proximal = self.parent(proximal)
+
+            if proximal:
+                # proximal is a branch
+                assert n_children > 1
+                distal_strahler_idxs = visited_branches[proximal]
+                distal_strahler_idxs.append(strahler_idx)
+
+                if len(distal_strahler_idxs) == n_children:
+                    # no more branches to visit downstream of this node:
+                    # if the max index is shared by >= 2 distal nodes, increment it
+                    # otherwise, just use the current max
+                    max_distal_si = max(distal_strahler_idxs)
+                    same = sum(si == max_distal_si for si in distal_strahler_idxs)
+                    strahler[proximal] = (
+                        max_distal_si + 1 if same >= 2 else max_distal_si
+                    )
+                    to_visit.append(proximal)
+            else:
+                # this node is the root
+                strahler[self.root] = strahler_idx
+
+        return strahler
+
 
 def first_intersection(path1, path2):
     path1 = set(path1)
@@ -610,6 +656,15 @@ class ArborNX(BaseArbor):
         sub.add_edge_pairs(*edge_pairs)
         return sub
 
+    def parent(self, node_id):
+        parents = list(self._disto_proximal.successors(node_id))
+        if len(parents) == 0:
+            return None
+        elif len(parents) == 1:
+            return parents[0]
+        else:
+            raise ValueError(f"Node {node_id} has more than one parent ({parents})")
+
 
 class ArborClassic(BaseArbor):
     """
@@ -632,6 +687,9 @@ class ArborClassic(BaseArbor):
         for parent_id in self.edges.values():
             if parent_id not in self.edges:
                 return parent_id
+
+    def parent(self, node_id):
+        return self.edges.get(node_id)
 
     def add_edges(
         self, edges: Iterable[int], accessor: Optional[Callable[[int, int], int]] = None

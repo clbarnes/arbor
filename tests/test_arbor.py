@@ -161,6 +161,25 @@ def test_partition_features(real_arbor):
         visited.update(partition)
 
 
+def test_strahler_analysis(simple_arbor):
+    assert simple_arbor.strahler_analysis() == {
+        1: 2,
+        2: 2,
+        3: 2,
+        4: 1,
+        5: 1,
+        6: 1,
+        7: 1,
+        8: 1,
+    }
+
+
+def test_can_strahler_real(real_arbor):
+    strahler = real_arbor.strahler_analysis()
+    assert len(strahler) == len(real_arbor.nodes_list())
+    assert max(strahler.values()) == strahler[real_arbor.root]
+
+
 @pytest.mark.slow
 def test_flow_centrality_real(real_arbor_parser, result_factory):
     sources = real_arbor_parser.inputs
